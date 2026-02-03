@@ -4,22 +4,33 @@ import java.time.Instant;
 import java.util.Set;
 
 import io.smallrye.jwt.build.Jwt;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Response;
+import uce.edu.web.api.auth.application.UserService;
+import uce.edu.web.api.auth.application.representation.UserRepresentation;
 
+@ApplicationScoped
+@Path("/auth")
 public class AuthResource {
+
+    @Inject
+    UserService userService;
+
     @GET
     @Path("/token")
-    public TokenResponse token(
+    public Response token(
             @QueryParam("user") String user,
             @QueryParam("password") String password) {
-        // Validar usuario y password (simulado)
+        // Validar usuario y password usando UserService
+        UserRepresentation userRepresentation = userService.validarCredencial(user, password);
 
-        boolean ok = true;
-        String role = "user";
-        if (ok) {
+        if (userRepresentation != null) {
+            String role = userRepresentation.getRole();
             String issuer = "matricula-auth";
             long ttl = 3600;
 
@@ -33,10 +44,13 @@ public class AuthResource {
                     .expiresAt(exp)
                     .sign();
 
-            return new TokenResponse(jwt, exp.getEpochSecond(), role);
+            return Response.ok(new TokenResponse(jwt, exp.getEpochSecond(), role)).build();
         } else {
-            // Manejar error de autenticación
-            return null;
+            // Manejar error de autenticación - credenciales inválidas
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(new ErrorResponse("Credenciales inválidas",
+                            "Las credenciales proporcionadas no son válidas"))
+                    .build();
         }
 
     }
@@ -53,6 +67,19 @@ public class AuthResource {
             this.accessToken = accessToken;
             this.expiresAt = expiresAt;
             this.role = role;
+        }
+    }
+
+    public static class ErrorResponse {
+        public String error;
+        public String message;
+
+        public ErrorResponse() {
+        }
+
+        public ErrorResponse(String error, String message) {
+            this.error = error;
+            this.message = message;
         }
     }
 }
