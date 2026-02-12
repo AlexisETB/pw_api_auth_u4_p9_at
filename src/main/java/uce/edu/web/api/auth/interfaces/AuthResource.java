@@ -23,6 +23,7 @@ public class AuthResource {
     @Inject
     UserService userService;
 
+    //http://localhost:8082/auth/token?user=admn1&password=1234a
     @GET
     @Path("/token")
     @Produces(MediaType.APPLICATION_JSON)
